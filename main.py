@@ -1,0 +1,53 @@
+import telebot
+import yfinance as ticker_data
+import time
+import requests
+from bs4 import BeautifulSoup
+from threading import Thread
+import os
+from flask import Flask
+
+# إعداد خادم ويب إلزامي لـ Render لضمان استمرارية التشغيل
+app = Flask('')
+@app.route('/')
+def home(): return "✅ Bot is Online!"
+
+def run_web_server():
+    # Render يطلب استخدام متغير PORT لفتح المنفذ
+    port = int(os.environ.get("PORT", 8080))
+    app.run(host='0.0.0.0', port=port)
+
+API_TOKEN = '7613589945:AAGrXq6_X88Rz-FInK1i-Wj8_4X8fT3A'
+MY_USER_ID = 2271910
+FINVIZ_URL = 'https://finviz.com/screener.ashx?v=111&f=cap_smallover,sh_curvol_o1000,sh_float_u50,sh_relvol_o2,ta_perf_30p&ft=4'
+
+bot = telebot.TeleBot(API_TOKEN)
+sent_signals = []
+
+def analyze_and_report():
+    while True:
+        try:
+            headers = {'User-Agent': 'Mozilla/5.0'}
+            response = requests.get(FINVIZ_URL, headers=headers)
+            soup = BeautifulSoup(response.content, 'html.parser')
+            tickers = [a.text for a in soup.find_all('a', class_='screener-link-primary')]
+            for symbol in list(set(tickers)):
+                if symbol in sent_signals: continue
+                stock = ticker_data.Ticker(symbol)
+                data = stock.history(period="1d")
+                if data.empty: continue
+                current = data['Close'].iloc[-1]
+                open_p = data['Open'].iloc[-1]
+                change = ((current - open_p) / open_p) * 100
+                if 3 <= change <= 7:
+                    msg = f"🐋 **رادار الحيتان**\n📈 السهم: {symbol}\n💰 السعر: ${current:.2f}\n🎯 هدف1: ${current*1.05:.2f}\n🛑 وقف: ${current*0.97:.2f}"
+                    bot.send_message(MY_USER_ID, msg)
+                    sent_signals.append(symbol)
+        except: pass
+        time.sleep(180) # فحص كل 3 دقائق
+
+if __name__ == "__main__":
+    # تشغيل خادم الويب والتحليل معاً
+    Thread(target=run_web_server).start()
+    Thread(target=analyze_and_report).start()
+    bot.infinity_polling()

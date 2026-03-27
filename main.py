@@ -1,8 +1,12 @@
+import os
 import telebot
 import yfinance as yf
 from telebot import types
 
-TOKEN = '8471388372:AAEZGJ4yBL3D22HLK88ZBSKWzgXs3O2z_zQ'
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+if not TOKEN:
+    raise ValueError("TELEGRAM_BOT_TOKEN environment variable not set")
+
 bot = telebot.TeleBot(TOKEN)
 
 def get_short_data(ticker):
@@ -55,4 +59,3 @@ def phantom_radar(message):
 
 if __name__ == "__main__":
     bot.polling(none_stop=True)
-     

@@ -2,7 +2,7 @@ import telebot
 import yfinance as yf
 from telebot import types
 
-# توكن البوت الخاص بك
+# توكن البوت في سطر واحد
 TOKEN = '8471388372:AAEZGJ4yBL3D22HLK88ZBSKWzgXs3O2z_zQ'
 bot = telebot.TeleBot(TOKEN)
 

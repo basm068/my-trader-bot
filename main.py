@@ -2,7 +2,6 @@ import telebot
 import yfinance as yf
 from telebot import types
 
-# توكن البوت في سطر واحد
 TOKEN = '8471388372:AAEZGJ4yBL3D22HLK88ZBSKWzgXs3O2z_zQ'
 bot = telebot.TeleBot(TOKEN)
 
@@ -10,27 +9,26 @@ def get_short_data(ticker):
     try:
         stock = yf.Ticker(ticker)
         info = stock.info
-        short_shares = info.get('shortInterest', 0)
-        short_pct = info.get('shortPercentOfFloat', 0) * 100
-        price = info.get('currentPrice', 0)
+        # جلب البيانات مع التأكد من وجودها
+        s_qty = info.get('shortInterest', 0)
+        s_pct = info.get('shortPercentOfFloat', 0) * 100
+        price = info.get('currentPrice') or info.get('regularMarketPrice', 0)
         
         status = "✅ ضغط طبيعي"
-        if short_pct > 15: status = "⚠️ سهم ثقيل (شورت عالي)"
-        if short_pct > 25: status = "🚨 خطر: سيطرة شورت كاملة"
+        if s_pct > 15: status = "⚠️ سهم ثقيل (شورت عالي)"
+        if s_pct > 25: status = "🚨 خطر: سيطرة شورت كاملة"
         
-        return short_shares, short_pct, price, status
+        return s_qty, s_pct, price, status
     except:
         return 0, 0, 0, "بيانات غير متوفرة"
 
 @bot.message_handler(func=lambda message: True)
 def phantom_radar(message):
-    ticker = message.text.upper().replace('#', '')
+    # تحويل النص لحروف كبيرة وإزالة أي مسافات أو رموز
+    ticker = message.text.upper().strip().replace('#', '')
     s_qty, s_pct, price, status = get_short_data(ticker)
     
-    # مسح الأزرار القديمة قسرياً
     markup_remove = types.ReplyKeyboardRemove()
-    
-    # الأزرار الجديدة الأنيقة
     markup = types.InlineKeyboardMarkup(row_width=2)
     btn1 = types.InlineKeyboardButton("🚀 صيد السيولة", callback_data="liq")
     btn2 = types.InlineKeyboardButton("🕋 الأسهم النقية", callback_data="halal")

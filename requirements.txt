@@ -1,5 +1,2 @@
 pyTelegramBotAPI
 yfinance
-pandas
-pytz
-Flask

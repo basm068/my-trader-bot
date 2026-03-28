@@ -2,6 +2,7 @@ import os
 import telebot
 import yfinance as yf
 from telebot import types
+import time
 
 TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
 if not TOKEN:
@@ -11,25 +12,29 @@ bot = telebot.TeleBot(TOKEN)
 
 def get_short_data(ticker):
     try:
-        stock = yf.Ticker(ticker)
+        stock = yf.Ticker(ticker, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'})
+        # Force fetching info with a delay-friendly approach
         info = stock.info
-        # جلب البيانات مع التأكد من وجودها
+        if not info or 'currentPrice' not in info:
+            return 0, 0, 0, "⚠️ رمز غير صحيح أو بيانات محجوبة"
+            
+        price = info.get('currentPrice') or info.get('regularMarketPreviousClose') or 0
         s_qty = info.get('shortInterest', 0)
-        s_pct = info.get('shortPercentOfFloat', 0) * 100
-        price = info.get('currentPrice') or info.get('regularMarketPrice', 0)
-        
-        status = "✅ ضغط طبيعي"
-        if s_pct > 15: status = "⚠️ سهم ثقيل (شورت عالي)"
-        if s_pct > 25: status = "🚨 خطر: سيطرة شورت كاملة"
-        
+        s_pct = (info.get('shortPercentOfFloat', 0) or 0) * 100
+        status = "✅ طبيعي" if s_pct < 15 else "⚠️ ضغط عالي"
         return s_qty, s_pct, price, status
-    except:
-        return 0, 0, 0, "بيانات غير متوفرة"
+    except Exception as e:
+        return 0, 0, 0, f"❌ خطأ: {str(e)}"
 
 @bot.message_handler(func=lambda message: True)
 def phantom_radar(message):
     # تحويل النص لحروف كبيرة وإزالة أي مسافات أو رموز
     ticker = message.text.upper().strip().replace('#', '')
+    
+    if not ticker:
+        bot.reply_to(message, "📝 الرجاء إدخال رمز السهم (مثال: AAPL)")
+        return
+    
     s_qty, s_pct, price, status = get_short_data(ticker)
     
     markup_remove = types.ReplyKeyboardRemove()
